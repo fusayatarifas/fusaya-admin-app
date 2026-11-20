@@ -23,6 +23,8 @@
       message.textContent = 'Abre la app FUSAYA Admin y toca Continuar con Google.';
     } else {
       const panel = new URL('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
+      // Apps Script usa la sesión principal para abrir la página. OAuth identifica al administrador.
+      panel.searchParams.set('authuser', '0');
       panel.searchParams.set('state', state);
       panel.searchParams.set('code', code);
       location.replace(panel.href);
