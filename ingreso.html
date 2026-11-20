@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <link rel="icon" href="data:,">
+  <title>Ingreso a FUSAYA</title>
+</head>
+<body>
+  <p id="mensaje" role="status">Regresando al panel de FUSAYA…</p>
+  <script>
+    const query = new URLSearchParams(location.search);
+    history.replaceState(null, '', location.pathname);
+    const message = document.getElementById('mensaje');
+    const state = query.get('state') || '';
+    const code = query.get('code') || '';
+    if (query.has('error')) {
+      message.textContent = 'Google no completó el ingreso. Abre la app para volver a entrar.';
+    } else if (query.getAll('state').length !== 1 || !/^[a-f0-9]{64}$/i.test(state) ||
+               query.getAll('code').length !== 1 || !code || code.length > 4096) {
+      message.textContent = 'Abre la app FUSAYA Admin y toca Continuar con Google.';
+    } else {
+      const panel = new URL('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
+      panel.searchParams.set('state', state);
+      panel.searchParams.set('code', code);
+      location.replace(panel.href);
+    }
+  </script>
+</body>
+</html>
