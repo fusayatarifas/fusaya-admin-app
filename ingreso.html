@@ -4,13 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <link rel="icon" href="data:,">
   <title>Ingreso a FUSAYA</title>
 </head>
 <body>
   <p id="mensaje" role="status">Regresando al panel de FUSAYA…</p>
   <script>
+    async function volverALaApp() {
+      const {completarIngreso} = await import('./panel-ingreso.js');
+      const {crearTransportePanel} = await import('./panel-api.js');
+      const solicitar = crearTransportePanel('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
+      const sesion = await completarIngreso(solicitar);
+      sessionStorage.setItem('fusaya.panel.sesion', sesion);
+      location.replace('./panel.html');
+    }
+
+    if (sessionStorage.getItem('fusaya.oauth.estado')) {
+      volverALaApp().catch(() => {
+        sessionStorage.removeItem('fusaya.panel.sesion');
+        document.getElementById('mensaje').textContent =
+          'No se pudo abrir el panel. Regresa a FUSAYA Admin para volver a entrar.';
+      });
+    } else {
     const query = new URLSearchParams(location.search);
     history.replaceState(null, '', location.pathname);
     const message = document.getElementById('mensaje');
@@ -28,6 +44,7 @@
       panel.searchParams.set('state', state);
       panel.searchParams.set('code', code);
       location.replace(panel.href);
+    }
     }
   </script>
 </body>
