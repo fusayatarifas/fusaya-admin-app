@@ -11,6 +11,7 @@ function doPost(e) {
     if (!cuerpo) return responder({ok: false, mensaje: 'Solicitud incompleta.'});
 
     const solicitud = JSON.parse(cuerpo);
+    if (solicitud.tipo === 'interfaz') return responder({ok: true, datos: interfazApp_(solicitud.sesion)});
     if (solicitud.tipo === 'inicio') return responder({ok: true, datos: iniciarIngresoApp_()});
     if (solicitud.tipo === 'ingreso') {
       return responder({ok: true, datos: completarIngresoApp_(solicitud)});
@@ -95,4 +96,38 @@ function completarIngresoApp_({estado, codigo}) {
   const sesion = claveAleatoria_();
   cache.put('sesion:' + sesion, datos.email.toLowerCase(), 1800);
   return {sesion};
+}
+
+function interfazApp_(sesion) {
+  if (typeof sesion !== 'string' || !/^[a-f0-9]{64}$/i.test(sesion)) {
+    throw new Error('Sesión inválida.');
+  }
+  const email = CacheService.getScriptCache().get('sesion:' + sesion);
+  if (!administradorApp_(email)) throw new Error('Cuenta sin acceso.');
+
+  const origen = HtmlService.createHtmlOutputFromFile('PanelAdmin').getContent();
+  const llamadas = /^function call\(fn,\.\.\.args\)\{[^\r\n]*\}$/m;
+  const adjuntos = /^async function subirDocumento\(\)\{[^\r\n]*\}$/m;
+  if (!llamadas.test(origen) || !adjuntos.test(origen)) {
+    throw new Error('La versión del panel no admite esta conexión.');
+  }
+  const html = origen
+    .replace(/^const sesionFusaya = [^\r\n]*\r?\n/m, '')
+    .replace(llamadas, () => `async function call(fn, ...args) {
+      try { return await window.fusayaPanel.ejecutar(fn, ...args); }
+      catch (error) { toast(error.message, true); throw error; }
+    }`)
+    .replace(adjuntos, () => `async function subirDocumento() {
+      const input = $('dArchivo');
+      const mensaje = await window.fusayaPanel.subirDocumento({
+        piloto: val('dPiloto'), tipo: val('dTipo'), vence: val('dVence'), archivo: input.files[0],
+      });
+      toast(mensaje);
+      input.value = '';
+      await load();
+    }`);
+  if (html.includes('google.script.run') || html.includes('<?') || html.includes('sesionFusaya')) {
+    throw new Error('La plantilla conserva dependencias sin migrar.');
+  }
+  return {html};
 }
