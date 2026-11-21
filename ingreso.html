@@ -4,47 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
   <link rel="icon" href="data:,">
   <title>Ingreso a FUSAYA</title>
 </head>
 <body>
-  <p id="mensaje" role="status">Regresando al panel de FUSAYA…</p>
+  <p id="mensaje" role="status">Validando el acceso seguro de FUSAYA…</p>
   <script>
-    async function volverALaApp() {
-      const {completarIngreso} = await import('./panel-ingreso.js');
-      const {crearTransportePanel} = await import('./panel-api.js');
-      const solicitar = crearTransportePanel('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
-      const sesion = await completarIngreso(solicitar);
-      sessionStorage.setItem('fusaya.panel.sesion', sesion);
-      location.replace('./panel.html');
-    }
-
-    if (sessionStorage.getItem('fusaya.oauth.estado')) {
-      volverALaApp().catch(() => {
-        sessionStorage.removeItem('fusaya.panel.sesion');
-        document.getElementById('mensaje').textContent =
-          'No se pudo abrir el panel. Regresa a FUSAYA Admin para volver a entrar.';
-      });
-    } else {
-    const query = new URLSearchParams(location.search);
+    const consulta = new URLSearchParams(location.search);
+    const codigo = consulta.get('code') || '';
+    const estado = consulta.get('state') || '';
+    const errorGoogle = consulta.has('error');
     history.replaceState(null, '', location.pathname);
-    const message = document.getElementById('mensaje');
-    const state = query.get('state') || '';
-    const code = query.get('code') || '';
-    if (query.has('error')) {
-      message.textContent = 'Google no completó el ingreso. Abre la app para volver a entrar.';
-    } else if (query.getAll('state').length !== 1 || !/^[a-f0-9]{64}$/i.test(state) ||
-               query.getAll('code').length !== 1 || !code || code.length > 4096) {
-      message.textContent = 'Abre la app FUSAYA Admin y toca Continuar con Google.';
+    const mensaje = document.getElementById('mensaje');
+    if (errorGoogle) {
+      mensaje.textContent = 'Google no completó el ingreso. Regresa al panel e inténtalo de nuevo.';
+    } else if (consulta.getAll('state').length !== 1 ||
+               !/^[a-f0-9]{64}$/i.test(estado) ||
+               consulta.getAll('code').length !== 1 ||
+               !codigo || codigo.length > 4096) {
+      mensaje.textContent = 'Abre FUSAYA Admin y toca Continuar con Google para iniciar sesión.';
     } else {
-      const panel = new URL('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
-      // Apps Script usa la sesión principal para abrir la página. OAuth identifica al administrador.
-      panel.searchParams.set('authuser', '0');
-      panel.searchParams.set('state', state);
-      panel.searchParams.set('code', code);
-      location.replace(panel.href);
-    }
+      const destino = new URL('https://script.google.com/macros/s/AKfycbySVKEV9v0jUR04OfkmzHX9dkNHvMMvGExC9E-1wODshGTAV45d6J0eip91NLJ0ntE_/exec');
+      destino.searchParams.set('state', estado);
+      destino.searchParams.set('code', codigo);
+      location.replace(destino.href);
     }
   </script>
 </body>
