@@ -176,3 +176,14 @@ function ext_(m){return m==='application/pdf'?'.pdf':m==='image/png'?'.png':'.jp
 function dateIso_(v){if(!v)return'';if(v instanceof Date&&!isNaN(v))return Utilities.formatDate(v,FUSAYA_DOCS.TZ,'yyyy-MM-dd');const s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);return isNaN(d)?'':Utilities.formatDate(d,FUSAYA_DOCS.TZ,'yyyy-MM-dd');}
 function now_(){return Utilities.formatDate(new Date(),FUSAYA_DOCS.TZ,"yyyy-MM-dd'T'HH:mm:ss");}
 function today_(){return Utilities.formatDate(new Date(),FUSAYA_DOCS.TZ,'yyyy-MM-dd');}
+
+/** Safe read-only deployment check: validates private sheet tabs and Drive root. */
+function revisarConexion(){
+  const ss=SpreadsheetApp.openById(property_('SPREADSHEET_ID'));
+  const faltan=Object.values(FUSAYA_DOCS.TABS).filter(n=>!ss.getSheetByName(n));
+  if(faltan.length)throw new Error('Faltan pestañas: '+faltan.join(', '));
+  const folder=DriveApp.getFolderById(property_('PILOT_ROOT_FOLDER_ID'));
+  const count=Math.max(0,ss.getSheetByName(FUSAYA_DOCS.TABS.PILOTS).getLastRow()-1);
+  const result={estado:'OK',pestanas:Object.values(FUSAYA_DOCS.TABS),carpeta:folder.getName(),fichasExistentes:count};
+  Logger.log(JSON.stringify(result)); return result;
+}
