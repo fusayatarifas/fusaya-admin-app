@@ -8,7 +8,7 @@ const FUSAYA_DOCS = Object.freeze({
   MAX_FILE_BYTES: 8 * 1024 * 1024,
   MIME: ['application/pdf', 'image/jpeg', 'image/png'],
   TABS: { PILOTS: 'Pilotos', DOCS: 'Documentos', ADMINS: 'Administradores', CONFIG: 'Configuracion', AUDIT: 'Auditoria' },
-  DOCS: ['CEDULA_FRENTE', 'CEDULA_REVERSO', 'LICENCIA_FRENTE', 'LICENCIA_REVERSO', 'ANTECEDENTES_JUDICIALES', 'SOAT', 'TECNOMECANICA']
+  DOCS: ['CEDULA_FRENTE', 'CEDULA_REVERSO', 'LICENCIA_FRENTE', 'LICENCIA_REVERSO', 'ANTECEDENTES_JUDICIALES', 'TARJETA_PROPIEDAD', 'SOAT', 'TECNOMECANICA']
 });
 
 function doGet() {
@@ -53,8 +53,9 @@ function authorize_(idToken) {
 }
 
 function init_(email) {
+  const documents = rows_(FUSAYA_DOCS.TABS.DOCS);
   const pilots = rows_(FUSAYA_DOCS.TABS.PILOTS).filter(r => String(r.ESTADO || '').toUpperCase() !== 'INACTIVO').map(p => {
-    const docs = rows_(FUSAYA_DOCS.TABS.DOCS).filter(d => d.CODIGO_PILOTO === p.CODIGO && d.VIGENTE === 'SI');
+    const docs = documents.filter(d => d.CODIGO_PILOTO === p.CODIGO && d.VIGENTE === 'SI');
     return Object.assign({}, p, { documentos: docs.map(publicDoc_), resumen: documentSummary_(docs) });
   });
   const config = config_();
@@ -187,3 +188,11 @@ function revisarConexion(){
   const result={estado:'OK',pestanas:Object.values(FUSAYA_DOCS.TABS),carpeta:folder.getName(),fichasExistentes:count};
   Logger.log(JSON.stringify(result)); return result;
 }
+
+function doPost(e) {
+ try {
+  const body=JSON.parse(e.postData.contents);
+  return json_({ok:true,value:api(body.action,body.payload,body.token)});
+ } catch (error) {return json_({ok:false,error:String(error.message || 'Operación rechazada')});}
+}
+function json_(value){return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);}
